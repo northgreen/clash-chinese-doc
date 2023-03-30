@@ -1,0 +1,122 @@
+\subsection{代码示例}
+这一章节在于给大家一些特殊的示例用法，给大家展示一下这个软件的强大的特殊用法。
+\paragraph{基于规则的wireguard} 此功能只能在支持wireguard并且开启此功能的内核上使用。
+\verb|Table|选项能够阻止\verb|wg-quick|覆盖默认路由
+
+\subparagraph{example}"\verb|wg0.conf|"
+
+\begin{lstlisting}[breaklines=true,language=sh]
+[Interface]
+PrivateKey = ...
+Address = 172.16.0.1/32
+MTU = ...
+Table = 6666
+PostUp = ip rule add from 172.16.0.1/32 table 6666
+
+[Peer]
+AllowedIPs = 0.0.0.0/0
+AllowedIPs = ::/0
+PublicKey = ...
+Endpoint = ...
+\end{lstlisting}
+
+那么在Clash中，你只需要创建一个名为“DIRECT”的具有特输出接口代理组。
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+proxy-groups:
+  - name: Wireguard
+    type: select
+    interface-name: wg0
+    proxies:
+      - DIRECT
+rules:
+  - DOMAIN,google.com,Wireguard
+\end{lstlisting}
+
+\paragraph{与OpenConnect一起使用}OpenConnect支持Cisco AnyConnect SSL VPN, Juniper Network Connect, Palo Alto Networks (PAN) GlobalProtect SSL VPN, Pulse Connect Secure SSL VPN, F5 BIG-IP SSL VPN, FortiGate SSL VPN and Array Networks SSL VPN.
+
+例如，当你的公司里使用Cisco AnyConnect进行内部网络访问。在这里我会展示如何使用clash的路由策略进行更方便的上网。
+
+首先，你需要安装\href{https://github.com/dlenski/vpn-slice#requirements}{vpn-slice}，这个工具能够覆盖默认的OpenConnect行为。通俗的来说，这个软件能够阻止VPN软件接管你的默认网络路由。
+
+接下来你需要写一个脚本（在下文中我们将其称作为\verb|tun0.sh|）就像这样子：(windows下请自行脑补)
+
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+#!/bin/bash
+ANYCONNECT_HOST="vpn.example.com"
+ANYCONNECT_USER="john"
+ANYCONNECT_PASSWORD="foobar"
+ROUTING_TABLE_ID="6667"
+TUN_INTERFACE="tun0"
+
+#如果服务器在中国大陆，则需要添加--no-dtls。因为中国的UDP可能是是不稳定的。
+echo "$ANYCONNECT_PASSWORD" | \
+  openconnect \
+    --non-inter \
+    --passwd-on-stdin \
+    --protocol=anyconnect \
+    --interface $TUN_INTERFACE \
+    --script "vpn-slice
+if [ \"\$reason\" = 'connect' ]; then
+  ip rule add from \$INTERNAL_IP4_ADDRESS table $ROUTING_TABLE_ID
+  ip route add default dev \$TUNDEV scope link table $ROUTING_TABLE_ID
+elif [ \"\$reason\" = 'disconnect' ]; then
+  ip rule del from \$INTERNAL_IP4_ADDRESS table $ROUTING_TABLE_ID
+  ip route del default dev \$TUNDEV scope link table $ROUTING_TABLE_ID
+fi" \
+    --user $ANYCONNECT_USER \
+    https://$ANYCONNECT_HOST
+\end{lstlisting}
+
+
+然后你需要将其配置为一个systemd服务。
+
+创建\verb|text/etc/systemd/system/tun0.service|
+
+\begin{lstlisting}
+Description=Cisco AnyConnect VPN
+After=network-online.target
+Conflicts=shutdown.target sleep.target
+
+[Service]
+Type=simple
+ExecStart=/path/to/tun0.sh
+KillSignal=SIGINT
+Restart=always
+RestartSec=3
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=multi-user.target
+\end{lstlisting}
+
+然乎启动这个服务
+\begin{lstlisting}[breaklines=true,language=sh]
+chmod +x /path/to/tun0.sh
+systemctl daemon-reload
+systemctl enable tun0
+systemctl start tun0
+\end{lstlisting}
+
+然后你可以查看日志查看它有没有正常运行，简单的看是否创建了\verb|tun0|端口。
+
+和Wireguard相似，，将出口连接到TUN设备只需要添加一个代理组：
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+proxy-groups:
+  - name: Cisco AnyConnect VPN
+    type: select
+    interface-name: tun0
+    proxies:
+      - DIRECT
+\end{lstlisting}
+
+……然后就可以准备使用了。添加需要的规则：
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+rules:
+  - DOMAIN-SUFFIX,internal.company.com,Cisco AnyConnect VPN
+\end{lstlisting}
+
+当出现一些问题时，你可以查看调试级别的日志。

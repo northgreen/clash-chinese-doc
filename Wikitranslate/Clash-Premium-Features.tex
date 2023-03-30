@@ -1,0 +1,286 @@
+\subsection{premium版本的功能特性}
+premium核心是专有的，在内部ci管线上构建
+
+\paragraph{代理}
+由于对gvisor的依赖，目前只有premium版本有Wireguard\\
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+  proxies:
+    - name: "wg"
+        type: wireguard
+        server: 127.0.0.1
+        port: 443
+        ip: 172.16.0.2
+        # ipv6: your_ipv6
+        private-key: eCtXsJZ27+4PbhDkHnB923tkUn2Gj59wZw5wFA75MnU=
+        public-key: Cr8hWlKvtDt7nrvf+f0brNQQzabAqrjfBvas9pmowjo=
+        # preshared-key: base64
+        # remote-dns-resolve: true # 使用`dns` 字段对DNS进行远程解析, 
+        默认是 true
+        # dns: [1.1.1.1, 8.8.8.8]
+        # mtu: 1420
+        udp: true
+\end{lstlisting}
+
+
+\paragraph{TUN驱动}
+
+
+不同于硬件物理网卡，TUN 是完全由软件实现的虚拟网络设备，在功能上 TUN 和物理网卡没有区别，它们同样都是网络设备，都可以设置 IP 地址，而且都属于网络设备管理模块，由网络设备管理模块统一来管理。（说人话就是虚拟网卡）
+
+开启TUN后，clash就能以虚拟网卡的方式就能接管你设备的所有网络流量。
+
+需要开启TUN的话只需要将以下内容添加到配置文件中\\ 
+
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+tun:
+  enable: true
+  stack: system # 或者 gvisor
+  # dns-hijack:
+  #   - 8.8.8.8:53
+  #   - tcp://8.8.8.8:53
+  #   - any:53
+  #   - tcp://any:53
+  auto-route: true #自动设置全局路由
+  auto-detect-interface: true # 与interface-name冲突
+\end{lstlisting}
+
+或者
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+interface-name: en0
+
+tun:
+  enable: true
+  stack: system # or gvisor
+  # dns-hijack:
+  #   - 8.8.8.8:53
+  #   - tcp://8.8.8.8:53
+  auto-route: true # auto set global route
+\end{lstlisting}
+
+
+
+对于DNS服务器推荐使用\verb|fake-ip|模式
+
+
+clash需要更高的权限创建TUN设备
+
+
+\verb|$sudo ./clash|
+
+
+然后手动创建默认路由和 DNS 服务器。如果你的设备已经有 TUN 设备，那么 Clash TUN 可能无法正常工作。在这种情况下，可以使用 \verb|fake-ip-filter| 解决问题。
+
+\subparagraph{TIPS:} {\em tun驱动也能在安卓设备上使用，但是它的控制设备是 \verb|/dev/tun| 而非 \verb|/dev/net/tun|,所以你需要创建一个软连接解决这个问题，例如：
+
+\verb|ln -sf /dev/tun /dev/net/tun|}
+\subparagraph{NOTE:}{\em \verb|auto-route|和\verb|auto-detect-interface| 仅在macOS、Windows，Linux和Android下可用，接收IPv4流量}
+
+\paragraph{windows下的TUN设置}到\url{https://www.wintun.net}下载最后的发行版，拷贝正确的\verb|wintun.dll|到clash的目录下\\
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+tun:
+  enable: true
+  stack: gvisor # 或者 system
+  dns-hijack:
+    - 198.18.0.2:53 # 当 `fake-ip-range` 是 198.18.0.1/16, 应劫持
+198.18.0.2:53
+  auto-route: true # 为Windows自动设置全局路由
+  # 建议使用`interface-name`
+  auto-detect-interface: true # 自动检测接口, 与 `interface-name` 
+冲突
+\end{lstlisting}
+
+
+
+最后打开clash即可。
+\paragraph{脚本} 脚本能够让用户以编程的方式灵活的选择网络流量包的代理方式。
+
+
+例如：\\
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+mode: Script
+
+# 参考https://lancellc.gitbook.io/clash/clash-config-file/script
+script:
+  code: |
+    def main(ctx, metadata):
+      ip = metadata["dst_ip"] = ctx.resolve_ip(metadata["host"])
+      if ip == "":
+        return "DIRECT"
+
+      code = ctx.geoip(ip)
+      if code == "LAN" or code == "CN":
+        return "DIRECT"
+
+      return "Proxy" # 对于没有被其他脚本匹配的请求的默认策略。
+\end{lstlisting}
+
+\subparagraph{NOTE：}{\bfseries 如果你想使用IP规则（IP-CIDR GEOIP），你需要先手动解析IP并且将它分配到元数据里。}
+
+上下文和元数据：\\
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+interface Metadata {
+  type: string // socks5、http
+  network: string // tcp
+  host: string
+  src_ip: string
+  src_port: string
+  dst_ip: string
+  dst_port: string
+}
+
+interface Context {
+  resolve_ip: (host: string) => string // ip string
+  resolve_process_name: (metadata: Metadata) => string
+  resolve_process_path: (metadata: Metadata) => string
+  geoip: (ip: string) => string // country code
+  log: (log: string) => void
+  proxy_providers: Record<string, Array<{ name: string, alive: boolean, 
+  delay: number }>>
+  rule_providers: Record<string, { match: (metadata: Metadata) => boole
+  an }>
+}
+\end{lstlisting}
+
+
+\paragraph{脚本快捷方式}
+在\verb|rules|里使用脚本
+\subparagraph{NOTE：}\verb|src_port|和\verb|dst_port|都被定义为变量\\
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+script:
+  shortcuts:
+    quic: network == 'udp' and dst_port == 443
+
+rules:
+  - SCRIPT,quic,REJECT
+\end{lstlisting}
+
+\paragraph{功能}这部分介绍它的功能
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+type resolve_ip = (host: string) => string // ip 字符串
+type in_cidr = (ip: string, cidr: string) => boolean // cidra中的ip
+type geoip = (ip: string) => string // 国家代号
+type match_provider = (name: string) => boolean // 在规则配置文件里
+type resolve_process_name = () => string // 查找进程名 (curl .e.g)
+type resolve_process_path = () => string // 查找进程路径 (/usr/bin/curl 
+.e.g)
+\end{lstlisting}
+
+\paragraph{规则配置文件} 对于代理程序来说，规则配置文件都是等价的，它允许用户加载其他文件的规则并且使整体配置文件更加简洁。这也是一个仅限于Premium的功能
+
+定义一个规则配置文件需要添加\verb|rule_providers|字段到主配置文件：\\
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+rule-providers:
+  apple:
+    behavior: "domain"
+    type: http
+    url: "url"
+    interval: 3600
+    path: ./apple.yaml
+  microsoft:
+    behavior: "domain"
+    type: file
+    path: /microsoft.yaml
+\end{lstlisting}
+
+
+有三种可用的\verb|behavior|：
+\subparagraph{domain}域名\\ \\
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+payload:
+  - '.blogger.com'
+  - '*.*.microsoft.com'
+  - 'books.itunes.apple.com'
+\end{lstlisting}
+
+
+\subparagraph{ipcider}ip地址\\
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+payload:
+  - '192.168.1.0/24'
+  - '10.0.0.0.1/32'
+\end{lstlisting}
+
+
+\subparagraph{classical}传统的\\
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+payload:
+  - DOMAIN-SUFFIX,google.com
+  - DOMAIN-KEYWORD,google
+  - DOMAIN,ad.com
+  - SRC-IP-CIDR,192.168.1.201/32
+  - IP-CIDR,127.0.0.0/8
+  - GEOIP,CN
+  - DST-PORT,80
+  - SRC-PORT,7777
+  # 这里不需要MATCH
+\end{lstlisting}
+
+
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+# 仅限于Premium
+rule-providers:
+  apple:
+    behavior: "domain" # domain, ipcidr 或者 classical (仅限于premium核心 )
+    type: http
+    url: "url"
+    interval: 3600
+    path: ./apple.yaml
+  microsoft:
+    behavior: "domain"
+    type: file
+    path: /microsoft.yaml
+
+rules:
+  - RULE-SET,apple,REJECT
+  - RULE-SET,microsoft,policy
+\end{lstlisting}
+
+
+\paragraph{追踪}\url{https://github.com/Dreamacro/clash-tracing}\\
+
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+profile:
+    tracing: true
+\end{lstlisting}
+
+
+\paragraph{eBPF} 这个需要\href{https://github.com/iovisor/bcc/blob/master/INSTALL.md#kernel-configuration}{内核支持}，只能捕获NIC的输出流量并且和\verb|auto-route|有冲突。\\
+
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+ebpf:
+  redirect-to-tun:
+    - eth0
+\end{lstlisting}
+
+\paragraph{自动重定向}
+单纯在Go语言上使用Linux内核的nftables的特性。它可以在不进行任何网络配置的情况下使用\verb|redir-port|(TCP)。
+
+
+建议使用TUN来处理TCP流量。与仅使用TUN相比，它提高了一些低性能设备的网络吞吐量性能。
+
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+interface-name: en0
+
+tun:
+  enable: true
+  stack: system
+  dns-hijack:
+    - any:53
+  auto-redir: true
+  auto-route: true
+\end{lstlisting}

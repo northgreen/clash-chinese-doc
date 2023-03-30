@@ -1,0 +1,91 @@
+\subsection{将clash作为服务运行}
+
+\paragraph{序言}clash被设计成在后台运行，但是目前golang下并没有什么完美的方法实现后台守护。我们可以用第三方工具将clash设置为守护进程。
+
+\paragraph{systemd} 将clash的二进制文件拷贝到\verb|/usr/local/bin|,将配置文件放在\verb|/etc/clash|:
+\begin{lstlisting}[breaklines=true,language=sh]
+$ cp clash /usr/local/bin
+$ cp config.yaml /etc/clash/
+$ cp Country.mmdb /etc/clash/
+\end{lstlisting}
+
+在\verb|/etc/systemd/system/clash.service|创建配置文件
+
+\begin{lstlisting}[breaklines=true]
+[Unit]
+Description=Clash daemon, A rule-based proxy in Go.
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/local/bin/clash -d /etc/clash
+
+[Install]
+WantedBy=multi-user.target
+\end{lstlisting}
+
+然后你需要重新加载systemd：
+\begin{lstlisting}[breaklines=true,language=sh]
+$ systemctl daemon-reload
+\end{lstlisting}
+让clashd随系统启动而启动
+\begin{lstlisting}[breaklines=true,language=sh]
+$ systemctl enable clash
+\end{lstlisting}
+使用以下命令检查clash的运行情况和日志
+\begin{lstlisting}[breaklines=true,language=sh]
+$ systemctl status clash
+$ journalctl -xe
+\end{lstlisting}
+（本指南的提供者：\href{https://github.com/ktechmidas}{ktechmidas}（\href{https://github.com/Dreamacro/clash/issues/754}{\#754}）
+
+\paragraph{Docker} 如果你使用的是Linux系统的话我们推荐使用\href{https://docs.docker.com/compose/}{docker compose}
+
+在MacOS或者Windows上更推荐使用第三方clash GUI（\href{https://install.appcenter.ms/users/clashx/apps/clashx-pro/distribution_groups/public}{ClashX Pro}或者\href{https://github.com/Fndroid/clash_for_windows_pkg}{clash for Windows}）
+
+另外并不推荐在Dockers容器中运行Clash Premium（\href{https://github.com/Dreamacro/clash/issues/2249#issuecomment-1203494599}{\#2249}）
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+services:
+  clash:
+    # ghcr.io/dreamacro/clash
+    # ghcr.io/dreamacro/clash-premium
+    # dreamacro/clash
+    # dreamacro/clash-premium
+    image: dreamacro/clash
+    container_name: clash
+    volumes:
+      - ./config.yaml:/root/.config/clash/config.yaml
+      # - ./ui:/ui # dashboard volume
+    ports:
+      - "7890:7890"
+      - "7891:7891"
+      # - "8080:8080" # 外部控制器
+    # TUN
+    # cap_add:
+    #   - NET_ADMIN
+    # devices:
+    #   - /dev/net/tun
+    restart: unless-stopped
+    network_mode: "bridge" # 或者是linux上的host
+\end{lstlisting}
+
+保存为\verb|docker-compose.yaml|然后在同一目录下创建\verb|config.yaml|，并且运行以下命令启动clash
+\begin{lstlisting}[breaklines=true,language=sh]
+$ docker-compose up -d
+\end{lstlisting}
+使用以下命令查看日志
+\begin{lstlisting}[breaklines=true,language=sh]
+$ docker-compose logs
+\end{lstlisting}
+使用以下命令停止clash
+\begin{lstlisting}[breaklines=true,language=sh]
+$ docker-compose stop
+\end{lstlisting}
+
+\paragraph{PM2} PM2
+
+\begin{lstlisting}[breaklines=true,language=sh]
+$ wget -qO- https://getpm2.com/install.sh | bash
+$ pm2 start clash
+\end{lstlisting}

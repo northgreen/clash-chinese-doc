@@ -1,0 +1,190 @@
+\subsection{外接控制器api}
+
+\paragraph{介绍} 外部控制器能够让用户程序化地控制clash通过HTTP RESTful API。很大程度上，第三方的clash图形界面都是基于这个功能。通过\verb|external-controller|指定一个地址开启这个功能。
+
+\subparagraph{TIP:}此文档不算太完善，请看\url{http://clash.gitbook.io/doc/restful-api}。
+
+\paragraph{身份验证}
+\begin{itemize}
+    \item 外部控制器接受\verb|Bearer Tokens|作为验证访问的方式。
+        \begin{itemize}
+            \item 使用\verb|Bearer <你的密钥>|作为请求的标头，以便传递网络凭据。
+        \end{itemize}
+\end{itemize}
+
+\paragraph{RESTful API 文档}
+
+\subparagraph{日志（Logs）} 
+\begin{itemize}
+    \item \verb|/logs|
+        \begin{itemize}
+            \item 请求方法：\verb|GET|
+                \begin{itemize}
+                    \item 完整路径：\verb|GET /logs|
+                    \item 说明：得到实时的日志
+                \end{itemize}
+        \end{itemize}
+\end{itemize}
+
+\subparagraph{流量（Traffic）}
+\begin{itemize}
+    \item \verb|/traffic|
+    \begin{itemize}
+        \item 请求方法：GET
+        \begin{itemize}
+            \item 完整路径：\verb|GET /traffic|
+            \item 描述：获取实时的流量数据
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+\subparagraph{版本（Version）}
+\begin{itemize}
+    \item \verb|/version|
+    \begin{itemize}
+        \item 请求方法：\verb|GET|
+        \begin{itemize}
+            \item 完整路径：\verb|GET /version|
+            \item 描述：获得clash版本
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+\subparagraph{配置（Configs）}
+\begin{itemize}
+    \item \verb|/configs|
+    \begin{itemize}
+        \item 请求方法：\verb|GET|
+        \begin{itemize}
+            \item 完整路径：\verb|GET /configs|
+            \item 描述：获取基础的配置信息
+        \end{itemize}
+        \item 请求方法：\verb|PUT|
+        \begin{itemize}
+            \item 完整路径：\verb|PUT /configs|
+            \item 描述：重新加载基础配置
+        \end{itemize}
+        \item 请求方法：\verb|PATCH|
+        \begin{itemize}
+            \item 完整路径：\verb|PATCH /configs|
+            \item 描述：更新基础配置
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+\subparagraph{代理（proxies）}
+\begin{itemize}
+    \item \verb|/proxies|
+    \begin{itemize}
+        \item 请求方法：\verb|GET|
+        \begin{itemize}
+            \item 完整路径：\verb|GET /proxies|
+            \item 描述：获得特定的代理信息
+        \end{itemize}
+
+        \item 请求方法：\verb|PUT|
+        \begin{itemize}
+            \item 完整路径：\verb|PUT /proxies/:name|
+            \item 描述：选择具体的代理
+        \end{itemize}
+    \end{itemize}
+    \item \verb|/proxies/:name/delay|
+    \begin{itemize}
+        \item 请求方法：\verb|GET|
+        \begin{itemize}
+            \item 完整路径：\verb|GET /proxies/:name/delay|
+            \item 描述：获取特定的代理的延迟测试信息
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+\subparagraph{规则（Rules）}
+\begin{itemize}
+    \item \verb|/rules|
+    \begin{itemize}
+        \item 请求方法：\verb|GET|
+        \begin{itemize}
+            \item 完整路径：\verb|GET /rules|
+            \item 得到规则的详细信息
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+\subparagraph{连接（connections）}
+
+\begin{itemize}
+    \item \verb|/connections|
+    \begin{itemize}
+        \item 请求方法：\verb|GET|
+        \begin{itemize}
+            \item 完整路径：\verb|GET /connections|
+            \item 描述：获取连接信息
+        \end{itemize}
+        \item 请求方法：\verb|DELETE|
+        \begin{itemize}
+            \item 完整路径：\verb|DELETE /connections|
+            \item 描述：关闭所有链接
+        \end{itemize}
+    \end{itemize}
+    \item \verb|/connections/:id|
+    \begin{itemize}
+        \item 请求方法：\verb|DELETE|
+        \begin{itemize}
+            \item 完整路径：\verb|DELETE /connections/:id|
+            \item 描述：闭特定连接
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+\subparagraph{供应商（Providers）}
+
+\begin{itemize}
+    \item \verb|/providers/proxies|
+    \begin{itemize}
+        \item 请求方法：\verb|GET|
+        \begin{itemize}
+            \item 完整路径\verb|GET /providers/proxies|
+            \item 描述:获取所有的代理的信息
+        \end{itemize}
+    \end{itemize}
+    \item \verb|/providers/proxies/:name|
+    \begin{itemize}
+        \item 请求方法：\verb|GET|
+        \begin{itemize}
+            \item 完整路径\verb|GET /providers/proxies/:name|
+            \item 描述:获取特定的代理提供商的代理的信息
+        \end{itemize}
+        \item \verb|PUT|
+        \begin{itemize}
+            \item 完整路径：\verb|GET /providers/proxies/:name|
+            \item 描述：选择特定的代理提供商
+        \end{itemize}
+    \end{itemize}
+    \item \verb|/providers/proxies/:name/healthcheck|
+    \begin{itemize}
+        \item 请求方法：\verb|GET|
+        \begin{itemize}
+            \item 完整路径\verb|GET /providers/proxies/:name/healthcheck|
+            \item 描述:获取特定的代理提供商的代理信息
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+\subparagraph{DNS查询（DNS Query）}
+
+\begin{itemize}
+    \item \verb|/dns/query|
+    \begin{itemize}
+        \item 请求方法：\verb|GET|
+        \begin{itemize}
+            \item 完整路径\verb|GET /providers/proxies|
+            \item 描述:获取指定名称和类型的DNS查询数据
+            \item 参数：
+            \begin{itemize}
+                \item \verb|name|（必选）：所要查询的域名
+                \item \verb|type|（可选）：查询DNS的记录类型（例如： A, MX, CNAME等）如果没有指定的话默认是\verb|A|
+            \end{itemize}
+        \end{itemize}
+        \item 示例：\verb|GET /dns/query?name=example.com&type=A|
+    \end{itemize}
+\end{itemize}

@@ -1,0 +1,9 @@
+\subsection{FAQ}
+
+\paragraph{error:unsupported rule type RULE-SET}(不支持的规则类型RULE-SET)
+\begin{lstlisting}[breaklines=true,language=sh]
+FATA[0000] Parse config error: Rules[0] [RULE-SET,apple,REJECT] error: unsupported rule type RULE-SET
+\end{lstlisting}
+你是用的是clash的开源版本，但是Rule Providers（规则提供程序）目前只能在Premium（免费的）内核版本上使用
+
+\paragraph{我想要VLESS支持}概述：不可能，绝对不可能（bushi）论述：\url{https://github.com/Dreamacro/clash/issues/1185}

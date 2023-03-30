@@ -1,0 +1,471 @@
+\subsection{clash配置文件}
+
+\paragraph{简介}clash使用\href{https://yaml.org/}{YAML}语言,（YAML Ain't Markup Language）写配置文件，YAML语言旨在上易于计算机的解析和人的阅读。在这个章节里我们将会介绍clash的常见功能并且如何使用和配置它们。
+
+clash通过在本地创建一个HTTP、SOCKS5或者透明代理服务器，当一个请求（或者说是数据包）被收到时，clash将会将数据路由到不同的远程代理服务器，这些节点使用VMess、Shadowsocks、Snell、Trojan、SOCKS5或HTTP协议。
+
+\paragraph{所有的配置选项}这里将会列出所有的配置选项。你只需要照着做就行了。\\
+
+\begin{lstlisting}[breaklines=true,language=yaml,style=yaml]
+# 本地HTTP（S）代理服务器的端口
+port: 7890
+
+# 本地SOCKS5代理服务器的端口
+socks-port: 7891
+
+# 在Linux和macOS上的透明代理服务器的端口（重定向TCP和TProxy UDP）
+# redir-port: 7892
+
+# Linux下的透明服务器端口（TProxy TCP和TProxy UDP）
+# tproxy-port: 7893
+
+# 在同一端口上使用HTTP（S）和SOCKS4（A） 
+# mixed-port: 7890
+
+# 本地SOCKS5/HTTP（S）代理服务器的验证密钥
+# authentication:
+#  - "user1:pass1"
+#  - "user2:pass2"
+
+# 设置为true，以允许来自其他局域网IP地址的连接到本地端服务器。
+# allow-lan: false
+
+# 只在“allow-lan”为“true”的情况下可用
+# 这个选项控制那些局域网ip可以链接到本机。
+# '*': 允许所有IP地址
+# 192.168.122.11: 允许一个IPv4地址
+# "[aaaa::a8aa:ff:fe09:57d8]": 允许一个IPv6地址
+# bind-address: '*'
+
+# clash路由策略
+# rule: 基于规则的数据包路由模式
+# global: 所有的数据包都将转发到单个规则
+# direct: 直接向互联网转发数据包
+mode: rule
+
+# 一般情况下，clash会将日志输出到标准输入输出流（STDOUT）
+# 可选参数：info / warning / error / debug / silent
+# log-level: info
+
+# 当这个选项被设置为false时，解释器将不会使用NAT-IPv6
+# ipv6: false
+
+# RESTful网络API监听地址。通过这个功能，你能够控制或者开发一个clash的web控制端
+external-controller: 127.0.0.1:9090
+
+# 在配置目录的相对路径或放置一些静态web资源的目录的绝对路径。
+#Clash的核心将会在“http://{｛external controller｝}/ui”
+#上为其提供web服务器。
+#通过这个，你可以将yacd等可以与clash RESTful API对接的网页程序部署
+#于此，这是很方便的。
+# external-ui: 你的路径
+
+# RESTful API的密钥（可选） 
+# 要通过HTTP头`Authorization: Bearer $ {secret}`进行身份验证 
+# 如果RETful api 在0.0.0.0监听，则要求验证
+# secret: ""
+
+# 接口名字 （Outbound interface name）
+# interface-name: en0
+
+# fumark只有在Linux下是可用的
+# routing-mark: 6666
+
+# 静态DNS解析（像/etc/host） 
+#
+# 支持通配符(e.g. *.clash.dev, *.foo.*.example.com)
+# 非通配符域名优先级高于通配符域名
+# e.g. foo.example.com > *.example.com > .example.com
+# P.S. +.foo.com 和 .foo.com 和 foo.com 是平等的。
+# hosts:
+  # '*.clash.dev': 127.0.0.1
+  # '.dev': 127.0.0.1
+  # 'alpha.clash.dev': '::1'
+
+# profile:
+  # 将`select`的结果保存到$HOME/.config/clash/.cache
+  # 如果你并不需要这个，请将它设为false
+  # 当两个不同的配置具有相同名称的组时，所选择的值将被共享
+  # store-selected: true
+
+  # 保持fakeip
+  # store-fake-ip: false
+
+# DNS服务器设置
+# 这个选项是可选的，如果没有，将不会设置DNS服务器。
+dns:
+  enable: false
+  listen: 0.0.0.0:53
+  # ipv6: false # 当为false时，对AAAA的请求的响应将为空 
+
+  # DNS服务器使用以下名称服务器进行解析 
+  # 只需要指定IP地址
+  default-nameserver:
+    - 114.114.114.114
+    - 8.8.8.8
+  # enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16 # CIDR假IP地址池
+  # use-hosts: true # 查找地址并且返回IP记录
+  
+  # 访问这里的IP将不会使用虚假IP
+  # 也就是说将会向这些IP的访问都会使用
+  # 真实IP地址
+  # fake-ip-filter:
+  #   - '*.lan'
+  #   - localhost.ptlogin2.qq.com
+  
+  # 支持UDP，TCP，DoT，DoH协议。 你能够指定端口。
+  # 所有的DNS请求都不经代理发送到解析服务器，Clash将会采取第一个响应，并不会综合起来。 
+  nameserver:
+    - 114.114.114.114 # default value
+    - 8.8.8.8 # default value
+    - tls://dns.rubyfish.cn:853 # TLS的DNS
+    - https://1.1.1.1/dns-query # HTTPS的DNS
+    - dhcp://en0 # 来自DHCP的DNS 
+    # - '8.8.8.8#en0'
+
+  # 有`fallback`选项时，DNS服务器将向此段中的服务器以及`nameservers`中的服务器发送并发请求 
+  # 当GEOIP国家地理位置不是`CN`（中国）时，将使用`fallback`服务器中的回应。 
+  # fallback:
+  #   - tcp://1.1.1.1
+  #   - 'tcp://1.1.1.1#en0'
+
+  # 如果使用`nameservers`服务器解析得到的IP地址属于指定的子网范围内，则被视为无效地址，DNS服务器将使用`fallback`服务器返回解析结果。 
+  # IP address resolved with servers in `nameserver` is used when`fallback-filter.geoip` is true and when GEOIP of the IP address is `CN`.  当`fallback-filter.geoip`为true且IP地址的GEOIP为`CN`时，将使用在`nameserver`中解析的服务器的IP地址。
+  #
+
+  #如果`fallback-filter.geoip`为false，且不匹配`fallback-filter.ipcidr`，则始终使用来自`nameserver`命名服务器的结果。
+  # 这是对DNS污染攻击的一种防范措施。
+  # fallback-filter:
+  #   geoip: true
+  #   geoip-code: CN
+  #   ipcidr:
+  #     - 240.0.0.0/4
+  #   domain:
+  #     - '+.google.com'
+  #     - '+.facebook.com'
+  #     - '+.youtube.com'
+  
+  # 通过特定的DNS服务器解析指定域名。
+  # nameserver-policy:
+  #   'www.baidu.com': '114.114.114.114'
+  #   '+.internal.crop.com': '10.0.0.1'
+
+proxies:
+  # Shadowsocks
+  # 密码支持(加密方法):
+  #   aes-128-gcm aes-192-gcm aes-256-gcm
+  #   aes-128-cfb aes-192-cfb aes-256-cfb
+  #   aes-128-ctr aes-192-ctr aes-256-ctr
+  #   rc4-md5 chacha20-ietf xchacha20
+  #   chacha20-ietf-poly1305 xchacha20-ietf-poly1305
+  - name: "ss1"
+    type: ss
+    server: server
+    port: 443
+    cipher: chacha20-ietf-poly1305
+    password: "password"
+    # udp: true
+
+  - name: "ss2"
+    type: ss
+    server: server
+    port: 443
+    cipher: chacha20-ietf-poly1305
+    password: "password"
+    plugin: obfs
+    plugin-opts:
+      mode: tls # or http
+      # host: bing.com
+
+  - name: "ss3"
+    type: ss
+    server: server
+    port: 443
+    cipher: chacha20-ietf-poly1305
+    password: "password"
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket # 暂时没有QUIC
+      # tls: true # wss
+      # skip-cert-verify: true
+      # host: bing.com
+      # path: "/"
+      # mux: true
+      # headers:
+      #   custom: value
+
+  # vmess
+  # 密码支持auto/aes-128-gcm/chacha20-poly1305/none
+  - name: "vmess"
+    type: vmess
+    server: server
+    port: 443
+    uuid: uuid
+    alterId: 32
+    cipher: auto
+    # udp: true
+    # tls: true
+    # skip-cert-verify: true
+    # servername: example.com # 优先于wss主机 
+    # network: ws
+    # ws-opts:
+    #   path: /path
+    #   headers:
+    #     Host: v2ray.com
+    #   max-early-data: 2048
+    #   early-data-header-name: Sec-WebSocket-Protocol
+
+  - name: "vmess-h2"
+    type: vmess
+    server: server
+    port: 443
+    uuid: uuid
+    alterId: 32
+    cipher: auto
+    network: h2
+    tls: true
+    h2-opts:
+      host:
+        - http.example.com
+        - http-alt.example.com
+      path: /
+  
+  - name: "vmess-http"
+    type: vmess
+    server: server
+    port: 443
+    uuid: uuid
+    alterId: 32
+    cipher: auto
+    # udp: true
+    # network: http
+    # http-opts:
+    #   # method: "GET"
+    #   # path:
+    #   #   - '/'
+    #   #   - '/video'
+    #   # headers:
+    #   #   Connection:
+    #   #     - keep-alive
+
+  - name: vmess-grpc
+    server: server
+    port: 443
+    type: vmess
+    uuid: uuid
+    alterId: 32
+    cipher: auto
+    network: grpc
+    tls: true
+    servername: example.com
+    # skip-cert-verify: true
+    grpc-opts:
+      grpc-service-name: "example"
+
+  # socks5
+  - name: "socks"
+    type: socks5
+    server: server
+    port: 443
+    # username: username
+    # password: password
+    # tls: true
+    # skip-cert-verify: true
+    # udp: true
+
+  # http
+  - name: "http"
+    type: http
+    server: server
+    port: 443
+    # username: username
+    # password: password
+    # tls: true # https
+    # skip-cert-verify: true
+    # sni: custom.com
+
+  # Snell
+  # 注意,暂时还不支持UDP协议 
+  - name: "snell"
+    type: snell
+    server: server
+    port: 44046
+    psk: yourpsk
+    # version: 2
+    # obfs-opts:
+      # mode: http # 或者tls
+      # host: bing.com
+
+  # Trojan
+  - name: "trojan"
+    type: trojan
+    server: server
+    port: 443
+    password: yourpsk
+    # udp: true
+    # sni: example.com # 也可以成为服务器名称
+    # alpn:
+    #   - h2
+    #   - http/1.1
+    # skip-cert-verify: true
+
+  - name: trojan-grpc
+    server: server
+    port: 443
+    type: trojan
+    password: "example"
+    network: grpc
+    sni: example.com
+    # skip-cert-verify: true
+    udp: true
+    grpc-opts:
+      grpc-service-name: "example"
+
+  - name: trojan-ws
+    server: server
+    port: 443
+    type: trojan
+    password: "example"
+    network: ws
+    sni: example.com
+    # skip-cert-verify: true
+    udp: true
+    # ws-opts:
+      # path: /path
+      # headers:
+      #   Host: example.com
+
+  # ShadowsocksR
+  # 支持的密码（加密方式）:ss中所有的流密码 
+  # 支持的混淆方式（obfses）:
+  #   plain http_simple http_post
+  #   random_head tls1.2_ticket_auth tls1.2_ticket_fastauth
+  # The supported supported protocols:
+  #   origin auth_sha1_v4 auth_aes128_md5
+  #   auth_aes128_sha1 auth_chain_a auth_chain_b  
+  - name: "ssr"
+    type: ssr
+    server: server
+    port: 443
+    cipher: chacha20-ietf
+    password: "password"
+    obfs: tls1.2_ticket_auth
+    protocol: auth_sha1_v4
+    # obfs-param: domain.tld
+    # protocol-param: "#"
+    # udp: true
+
+proxy-groups:
+  # relay chains the proxies. proxies shall not contain a relay. No UDP support.
+  # Traffic: clash <-> http <-> vmess <-> ss1 <-> ss2 <-> Internet
+  - name: "relay"
+    type: relay
+    proxies:
+      - http
+      - vmess
+      - ss1
+      - ss2
+
+  # url-test会通过对代理进行URL的标准测试进行测速来选择使用哪个代理
+  - name: "auto"
+    type: url-test
+    proxies:
+      - ss1
+      - ss2
+      - vmess1
+    # tolerance: 150
+    # lazy: true
+    url: 'http://www.gstatic.com/generate_204'
+    interval: 300
+
+  # fallback会按照优先级选择一个可用的策略。通过一个URL对代理服务器进行测试，就像url-test组一样。
+  - name: "fallback-auto"
+    type: fallback
+    proxies:
+      - ss1
+      - ss2
+      - vmess1
+    url: 'http://www.gstatic.com/generate_204'
+    interval: 300
+
+  # 负载均衡：相同的eTLD+1请求将被拨打到同一个代理。 load-balance: The request of the same eTLD+1 will be dial to the same proxy.
+  - name: "load-balance"
+    type: load-balance
+    proxies:
+      - ss1
+      - ss2
+      - vmess1
+    url: 'http://www.gstatic.com/generate_204'
+    interval: 300
+    #  strategy: consistent-hashing # 或者 round-robin
+
+  # select用于选择代理或代理组。建议使用RESTful API切换代理，适合在GUI中的使用。 
+  - name: Proxy
+    type: select
+    # disable-udp: true
+    proxies:
+      - ss1
+      - ss2
+      - vmess1
+      - auto
+ 
+  # 可以将流量定向到另一个接口名或者fwmark，也支持在代理中使用。
+  - name: en1
+    type: select
+    interface-name: en1
+    routing-mark: 6667
+    proxies:
+      - DIRECT 
+
+  - name: UseProvider
+    type: select
+    use:
+      - provider1
+    proxies:
+      - Proxy
+      - DIRECT
+
+proxy-providers:
+  provider1:
+    type: http
+    url: "url"
+    interval: 3600
+    path: ./provider1.yaml
+    health-check:
+      enable: true
+      interval: 600
+      # lazy: true
+      url: http://www.gstatic.com/generate_204
+  test:
+    type: file
+    path: /test.yaml
+    health-check:
+      enable: true
+      interval: 36000
+      url: http://www.gstatic.com/generate_204
+
+tunnels:
+  # 一行的配置
+  - tcp/udp,127.0.0.1:6553,114.114.114.114:53,proxy
+  - tcp,127.0.0.1:6666,rds.mysql.com:3306,vpn
+  # 完整的yaml配置
+  - network: [tcp, udp]
+    address: 127.0.0.1:7777
+    target: target.com
+    proxy: proxy
+
+rules:
+  - DOMAIN-SUFFIX,google.com,auto
+  - DOMAIN-KEYWORD,google,auto
+  - DOMAIN,google.com,auto
+  - DOMAIN-SUFFIX,ad.com,REJECT
+  - SRC-IP-CIDR,192.168.1.201/32,DIRECT
+  # 可选的参数“no-resolve”是针对IP规则的
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - GEOIP,CN,DIRECT
+  - DST-PORT,80,DIRECT
+  - SRC-PORT,7777,DIRECT
+  - RULE-SET,apple,REJECT # 仅限于Premium版本
+  - MATCH,auto
+\end{lstlisting}
