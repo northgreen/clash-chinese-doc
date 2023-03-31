@@ -1,8 +1,0 @@
-all: clashwiki.pdf
-	xelatex clashwiki.tex
-
-.PHONY:clean 
-clean:
-	del clashwiki.out
-	del clashwiki.toc
-	del clashwiki.aux
