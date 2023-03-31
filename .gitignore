@@ -1,0 +1,9 @@
+rebbish/
+*.aux
+*.log
+*.out
+*.toc
+*~
+*.swp
+*.swo
+
